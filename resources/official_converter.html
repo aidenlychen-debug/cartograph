@@ -119,8 +119,10 @@ async function renderTilesForDoc(exportToBlob, doc, jobIdx, jobName, focusQuery)
     }
   }
 
-  // Tile 1: High-res close-up crop (~1500x950 canvas region around dense edge labels)
-  const cropEls = selectElementsInBox(els, targetX - 780, targetY - 460, targetX + 780, targetY + 460);
+  // Tile 1: Full canvas for compact diagrams (<= 120 els), or high-res close-up crop around dense labels
+  const cropEls = els.length <= 120
+    ? els
+    : selectElementsInBox(els, targetX - 780, targetY - 460, targetX + 780, targetY + 460);
   if (cropEls.length) {
     const blob = await exportToBlob({
       elements: cropEls,
@@ -131,8 +133,8 @@ async function renderTilesForDoc(exportToBlob, doc, jobIdx, jobName, focusQuery)
         exportWithDarkMode: false,
       },
       files: doc.files || {},
-      exportPadding: 28,
-      maxWidthOrHeight: 1800,
+      exportPadding: 32,
+      maxWidthOrHeight: 2200,
     });
     const buf = await blob.arrayBuffer();
     await fetch("/png?idx=" + jobIdx + "&tile=closeup", {
