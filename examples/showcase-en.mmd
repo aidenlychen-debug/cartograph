@@ -1,0 +1,49 @@
+flowchart LR
+    classDef root fill:#002FA7,stroke:#002FA7,stroke-width:2px,color:#FFFFFF,font-weight:bold,font-size:32px
+    classDef mod fill:#F5F5F7,stroke:#4B5563,stroke-width:1.5px,color:#1D1D1F,font-weight:bold,font-size:26px
+    classDef sub fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,color:#1D1D1F,font-weight:bold,font-size:20px
+    classDef k fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,color:#3A3A3C,font-size:20px
+    classDef key fill:#FFFFFF,stroke:#002FA7,stroke-width:2px,color:#002FA7,font-weight:bold,font-size:20px
+    classDef note fill:#FFFFFF,stroke:#6B7280,stroke-width:1.5px,stroke-dasharray:5 3,color:#3A3A3C,font-size:20px
+
+    ROOT["Systems Thinking<br/>& Feedback Loops"]
+
+    subgraph B01["Module 1: Feedback Loops & System Dynamics"]
+        MOD_01["01 | Reinforcing & Balancing Loops"]
+        SUB_01["Reinforcing Loop (Positive)"]
+        SUB_02["Balancing Loop (Negative)"]
+        K_01("Output amplifies initial input,<br/>driving exponential growth<br/>or runaway collapse")
+        K_02["Goal-seeking correction closes<br/>the gap to sustain stability"]
+        E_01("Case: Compound interest drives<br/>growth; thermostats stabilize<br/>room temperature")
+    end
+
+    subgraph B02["Module 2: Time Delays & High-Leverage Points"]
+        MOD_02["02 | Delays & System Leverage"]
+        K_03("Sensing and execution delays<br/>turn aggressive over-corrections<br/>into persistent oscillation")
+        K_04["Highest leverage reshapes goals,<br/>information flows, and core rules<br/>over surface parameters"]
+        E_02("Boundary: Parameter tweaks fade<br/>fast; map delay cycles first<br/>before intervening")
+    end
+
+    ROOT --> MOD_01
+    ROOT --> MOD_02
+    MOD_01 --> SUB_01
+    MOD_01 --> SUB_02
+    SUB_01 --> K_01
+    SUB_02 --> K_02
+    MOD_02 --> K_03
+
+    K_01 -->|Counterbalances| K_02
+    K_03 -->|Reveals Root Cause| K_04
+
+    E_01 -.->|Case| K_02
+    E_02 -.->|Boundary| K_04
+
+    class ROOT root
+    class MOD_01,MOD_02 mod
+    class SUB_01,SUB_02 sub
+    class K_01,K_03 k
+    class K_02,K_04 key
+    class E_01,E_02 note
+
+    style B01 fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,stroke-dasharray:6 4,color:#3A3A3C
+    style B02 fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,stroke-dasharray:6 4,color:#3A3A3C

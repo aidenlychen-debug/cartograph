@@ -12,7 +12,7 @@
 > Turn any book, paper, course, video, audio recording, image, or web page into a **fact-audited, zero-interference, publication-grade Mermaid Flowchart (`.mmd`) and native editable Excalidraw (`.excalidraw`) canvas** — powered by **Multi-Candidate Tournament Synthesis**, a **100-Point Deterministic Harness**, an **Offline-Cached Official Excalidraw Engine (`elbow: true`)**, and a **10-Check Real-Excalidraw Geometric Deconfliction Solver**.
 
 ![Cartograph Rendered Excalidraw Showcase](examples/preview-showcase.png)
-*Real unedited output rendered by Cartograph's own pipeline (`examples/golden-reference.mmd` → official `@excalidraw/mermaid-to-excalidraw` with `elbow: true` → 10-check `excalidraw_deconflict.py` → `exportToBlob` PNG): Klein Blue `#002FA7` focus anchors, dark-gray `#4B5563` solid content cards and rounded dotted module containers, `#6B7280` dashed auxiliary evidence cards, authentic Excalifont hand-drawn strokes, and 100% orthogonal arrows with zero overlaps.*
+*Real unedited output rendered by Cartograph's own pipeline (`examples/showcase-en.mmd` → official `@excalidraw/mermaid-to-excalidraw` with `elbow: true` → 10-check `excalidraw_deconflict.py` → `exportToBlob` PNG): Klein Blue `#002FA7` focus anchors, dark-gray `#4B5563` solid content cards and rounded dense-dotted module containers, `#6B7280` dashed auxiliary evidence cards, authentic Excalifont hand-drawn strokes, and 100% orthogonal arrows with zero overlaps.*
 
 ---
 
@@ -22,7 +22,7 @@ Anyone who has tried turning a dense 300–500 page book, lecture series, or tec
 
 1. **Page-by-page AI summarizers shatter narrative logic**: Mechanical page-boundary chunking produces shallow bullet lists that lose causal structure and feel worse to read than the original text.
 2. **Single-shot LLM Mermaid prompts produce unreadable hairballs**: They hallucinate loose cross-chapter spaghetti links, drop formulas/edge cases, silently break Mermaid syntax, or split one cohesive work into disconnected canvases.
-3. **Raw `mermaid-to-excalidraw` breaks on real dense & CJK graphs**: Even when the Mermaid syntax is valid, raw Excalidraw conversion routinely outputs curved diagonal splines (when `elbow: true` is omitted), places elbow turns **18px from a target box wall** so Chinese edge labels collide straight into node rectangles, stacks parallel arrows on top of each other's labels, clips CJK/digit chapter titles, lets external trunk lines run across module borders, and overflows module frames past their right-most cards. *(Even on the tiny 11-node showcase graph above, raw official export produces **17 geometric/clipping defects**; Cartograph's solver eliminates all 17 deterministically.)*
+3. **Raw `mermaid-to-excalidraw` breaks on real dense & multilingual graphs**: Even when the Mermaid syntax is valid, raw Excalidraw conversion routinely outputs curved diagonal splines (when `elbow: true` is omitted), places elbow turns **18px from a target box wall** so edge labels collide straight into node rectangles, stacks parallel arrows on top of each other's labels, clips Excalifont chapter titles, lets external trunk lines run across module borders, and overflows module frames past their right-most cards. *(Even on the compact 11-node English showcase above, raw official export produces **17 geometric & clipping defects** — all 4 edge labels collide into target nodes, 11 cards overflow Excalifont bounds, and both module titles clip; Cartograph's solver eliminates all 17 deterministically.)*
 4. **No deterministic verification loop**: Existing diagram skills generate once and pray — never measuring node overlap, label collisions, text clipping, or cross-module noise, and never inspecting rendered pixels before delivery.
 5. **Heavy runtime friction**: Most Mermaid-to-Excalidraw pipelines force you to install Node.js, npm, Puppeteer/Playwright, and live CDN bundles just to export one `.excalidraw` file.
 
@@ -85,14 +85,14 @@ flowchart LR
 
 ## Deep Dive: Engineering Pillars
 
-### 1. Universal Multimodal Ingestion & Chinese-First Localization
+### 1. Universal Multimodal Ingestion & Bilingual Language Modes (`--lang en` / `--lang zh`)
 | Input Format | Ingestion Mechanism | Integrity Guarantee |
 |---|---|---|
 | **PDF, Images, Audio, Video** | Native multimodal agent reading | Preserves diagrams, equations, tables, slides, and spoken nuance |
 | **EPUB, DOCX, HTML, SRT/VTT, MD, TXT** | `scripts/extract_content.py` (Python stdlib only) | Spine-ordered EPUB extraction, DRM detection, heading preservation, subtitle timestamp cleanup |
 | **Static & Dynamic Web URLs** | `extract_content.py` / Browser subagent | Strict factual boundary: paywalled or unreachable sources trigger an explicit gap report — never fabricated |
 
-- **Idiomatic Chinese Localization by Default (`--lang zh`)**: Foreign-language sources (English books, papers, courses) are translated and localized into natural, idiomatic Simplified Chinese before graph synthesis, preserving essential acronyms, frameworks, and formulas in concise bilingual parentheticals (e.g., `投资回报率（ROI）`, `反馈回路（Feedback Loop）`). The harness deterministically enforces `cjk_node_ratio >= 0.85` unless `--lang en` is requested.
+- **Dual Language Modes (`--lang en` & `--lang zh`)**: Generate pure English graphs with `--lang en` (as shown in the hero showcase above), or automatically localize foreign-language books, papers, and courses into idiomatic Simplified Chinese (`--lang zh`, the default for Chinese prompts) while preserving key acronyms, formulas, and framework names in concise bilingual parentheticals — deterministically verified by the harness (`cjk_node_ratio >= 0.85` in `zh` mode).
 
 ### 2. Code-Enforced Parallel 3-Candidate Tournament & Bounded Self-Healing Loop
 `scripts/orchestrate_pipeline.py` enforces multi-candidate synthesis in executable workflow code (not wishful prompt text):
@@ -168,8 +168,9 @@ knowledge-graph-architect/
 │   ├── orchestrate_pipeline.py               # Code-enforced parallel 3-candidate tournament + repair loop
 │   └── mermaid_to_excalidraw.py              # Static Mermaid auditor, geometry checker & offline fallback compiler
 └── examples/
-    ├── golden-reference.mmd                  # Reference compliant Mermaid fixture
-    └── preview-showcase.png                  # Real rendered showcase output from golden-reference.mmd
+    ├── showcase-en.mmd                       # English showcase Mermaid source rendered in README
+    ├── preview-showcase.png                  # Real rendered Excalidraw showcase from showcase-en.mmd
+    └── golden-reference.mmd                  # CJK localization regression fixture for --self-test
 ```
 
 ---
