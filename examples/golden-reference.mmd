@@ -1,0 +1,49 @@
+flowchart LR
+    classDef root fill:#002FA7,stroke:#002FA7,stroke-width:2px,color:#FFFFFF,font-weight:bold,font-size:32px
+    classDef mod fill:#F5F5F7,stroke:#4B5563,stroke-width:1.5px,color:#1D1D1F,font-weight:bold,font-size:26px
+    classDef sub fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,color:#1D1D1F,font-weight:bold,font-size:20px
+    classDef k fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,color:#3A3A3C,font-size:20px
+    classDef key fill:#FFFFFF,stroke:#002FA7,stroke-width:2px,color:#002FA7,font-weight:bold,font-size:20px
+    classDef note fill:#FFFFFF,stroke:#6B7280,stroke-width:1.5px,stroke-dasharray:5 3,color:#3A3A3C,font-size:20px
+
+    ROOT["示例主题：系统思考与反馈回路基础"]
+
+    subgraph B01["模块一：反馈回路与系统动力学"]
+        MOD_01["01｜增强回路与调节回路"]
+        SUB_01["增强回路（正反馈）"]
+        SUB_02["调节回路（负反馈）"]
+        K_01("输出持续强化原始输入<br/>形成指数级增长或失控衰退")
+        K_02["调节回路通过目标偏差修正<br/>使系统维持在动态平衡区间"]
+        E_01("案例：复利增长属典型增强回路<br/>恒温器控温属典型调节回路")
+    end
+
+    subgraph B02["模块二：时间延迟与高杠杆干预"]
+        MOD_02["02｜延迟效应与系统杠杆点"]
+        K_03("反馈信号存在感知与执行延迟<br/>过度激进调整易诱发系统震荡")
+        K_04["真正高杠杆点在于调整系统目标<br/>信息流结构与底层运行规则"]
+        E_02("边界：仅微调表层参数通常收效甚微<br/>须先识别延迟周期再做干预")
+    end
+
+    ROOT --> MOD_01
+    ROOT --> MOD_02
+    MOD_01 --> SUB_01
+    MOD_01 --> SUB_02
+    SUB_01 --> K_01
+    SUB_02 --> K_02
+    MOD_02 --> K_03
+
+    K_01 -->|形成制衡| K_02
+    K_03 -->|揭示根因| K_04
+
+    E_01 -.->|案例| K_02
+    E_02 -.->|边界| K_04
+
+    class ROOT root
+    class MOD_01,MOD_02 mod
+    class SUB_01,SUB_02 sub
+    class K_01,K_03 k
+    class K_02,K_04 key
+    class E_01,E_02 note
+
+    style B01 fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,stroke-dasharray:6 4,color:#3A3A3C
+    style B02 fill:#FFFFFF,stroke:#4B5563,stroke-width:1.5px,stroke-dasharray:6 4,color:#3A3A3C

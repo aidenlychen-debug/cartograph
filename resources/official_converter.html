@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cartograph Official Excalidraw Engine & Visual Verifier</title>
+  <script>
+    window.process = { env: { NODE_ENV: "production" } };
+    window.EXCALIDRAW_ASSET_PATH = "/npm/@excalidraw/excalidraw@0.18.1/dist/prod/";
+    window.addEventListener("error", (e) => {
+      fetch("/log", { method: "POST", body: "WINDOW_ERROR: " + (e.message || e.error) }).catch(() => {});
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      fetch("/log", { method: "POST", body: "UNHANDLED_REJECTION: " + (e.reason?.stack || e.reason) }).catch(() => {});
+    });
+  </script>
+</head>
+<body>
+<div id="status">Initializing...</div>
+<script type="module">
+const statusEl = document.getElementById("status");
+const log = async (msg) => {
+  statusEl.textContent = msg;
+  try {
+    await fetch("/log", { method: "POST", body: String(msg) });
+  } catch (_) {}
+};
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout after " + ms + "ms: " + label)), ms))
+  ]);
+}
+
+async function loadModules() {
+  // Primary: local server /npm/* proxy with persistent offline disk cache (works 100% offline once cached!)
+  // Fallback: direct CDN if running standalone without proxy
+  const sources = [
+    [
+      "/npm/@excalidraw/mermaid-to-excalidraw@3.6.0/+esm",
+      "/npm/@excalidraw/excalidraw@0.18.1/+esm"
+    ],
+    [
+      "https://cdn.jsdelivr.net/npm/@excalidraw/mermaid-to-excalidraw@3.6.0/+esm",
+      "https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.18.1/+esm"
+    ]
+  ];
+  let lastErr = null;
+  for (const [mUrl, eUrl] of sources) {
+    try {
+      await log("Loading official Excalidraw modules via " + mUrl);
+      const mMod = await withTimeout(import(mUrl), 45000, mUrl);
+      const eMod = await withTimeout(import(eUrl), 45000, eUrl);
+      if (mMod.parseMermaidToExcalidraw && eMod.convertToExcalidrawElements) {
+        return {
+          parseMermaidToExcalidraw: mMod.parseMermaidToExcalidraw,
+          convertToExcalidrawElements: eMod.convertToExcalidrawElements,
+          exportToBlob: eMod.exportToBlob,
+        };
+      }
+    } catch (err) {
+      lastErr = err;
+      await log("Module source failed (" + mUrl + "): " + (err?.message || err));
+    }
+  }
+  throw lastErr || new Error("Failed to load official @excalidraw packages");
+}
+
+function selectElementsInBox(elements, minX, minY, maxX, maxY) {
+  const inBox = new Set();
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  for (const e of elements) {
+    if (e.isDeleted) continue;
+    const x1 = e.x ?? 0;
+    const y1 = e.y ?? 0;
+    const x2 = x1 + (e.width ?? 0);
+    const y2 = y1 + (e.height ?? 0);
+    if (x2 >= minX && x1 <= maxX && y2 >= minY && y1 <= maxY) {
+      inBox.add(e.id);
+      if (e.containerId && byId.has(e.containerId)) inBox.add(e.containerId);
+      if (Array.isArray(e.boundElements)) {
+        for (const b of e.boundElements) {
+          if (byId.has(b.id)) inBox.add(b.id);
+        }
+      }
+    }
+  }
+  return elements.filter((e) => inBox.has(e.id));
+}
+
+async function renderTilesForDoc(exportToBlob, doc, jobIdx, jobName, focusQuery) {
+  const els = (doc.elements || []).filter((e) => !e.isDeleted);
+  if (!els.length || !exportToBlob) return;
+
+  // Determine close-up region: either centered on focusQuery text OR top-most dense labeled band
+  let targetX = null;
+  let targetY = null;
+  if (focusQuery) {
+    const hit = els.find((e) => e.type === "text" && typeof e.text === "string" && e.text.includes(focusQuery));
+    if (hit) {
+      targetX = hit.x + (hit.width || 0) / 2;
+      targetY = hit.y + (hit.height || 0) / 2;
+    }
+  }
+  if (targetX === null) {
+    const arrowIds = new Set(els.filter((e) => e.type === "arrow").map((e) => e.id));
+    const labels = els
+      .filter((e) => e.type === "text" && arrowIds.has(e.containerId))
+      .sort((a, b) => a.y - b.y);
+    if (labels.length) {
+      const pick = labels[Math.min(2, labels.length - 1)];
+      targetX = pick.x + (pick.width || 0) / 2;
+      targetY = pick.y + (pick.height || 0) / 2;
+    } else {
+      const ys = els.map((e) => e.y || 0);
+      const xs = els.map((e) => e.x || 0);
+      targetX = Math.min(...xs) + 700;
+      targetY = Math.min(...ys) + 450;
+    }
+  }
+
+  // Tile 1: High-res close-up crop (~1500x950 canvas region around dense edge labels)
+  const cropEls = selectElementsInBox(els, targetX - 780, targetY - 460, targetX + 780, targetY + 460);
+  if (cropEls.length) {
+    const blob = await exportToBlob({
+      elements: cropEls,
+      mimeType: "image/png",
+      appState: {
+        exportBackground: true,
+        viewBackgroundColor: "#ffffff",
+        exportWithDarkMode: false,
+      },
+      files: doc.files || {},
+      exportPadding: 28,
+      maxWidthOrHeight: 1800,
+    });
+    const buf = await blob.arrayBuffer();
+    await fetch("/png?idx=" + jobIdx + "&tile=closeup", {
+      method: "POST",
+      headers: { "Content-Type": "image/png" },
+      body: buf,
+    });
+    await log("Rendered PNG closeup for " + jobName + " (" + buf.byteLength + " bytes, " + cropEls.length + " els)");
+  }
+}
+
+async function main() {
+  try {
+    const { parseMermaidToExcalidraw, convertToExcalidrawElements, exportToBlob } = await loadModules();
+    const cfg = await (await fetch("/config")).json();
+    const mode = cfg.mode || "export";
+
+    if (mode === "export" || mode === "export_and_render") {
+      const jobs = await (await fetch("/jobs")).json();
+      await log("Converting " + jobs.length + " Mermaid diagram(s) via official Excalidraw (elbow:true)...");
+
+      for (const job of jobs) {
+        const mmdText = await (await fetch("/mmd?idx=" + job.idx)).text();
+        const { elements: skeletonElements, files } = await parseMermaidToExcalidraw(mmdText, {
+          elbow: true,
+          themeVariables: { fontSize: "20px" },
+        });
+        const excalidrawElements = convertToExcalidrawElements(skeletonElements);
+
+        const doc = {
+          type: "excalidraw",
+          version: 2,
+          source: "https://excalidraw.com",
+          elements: excalidrawElements,
+          appState: { gridSize: null, viewBackgroundColor: "#ffffff" },
+          files: files || {},
+        };
+
+        const postResp = await fetch("/result?idx=" + job.idx, {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify(doc),
+        });
+        if (!postResp.ok) {
+          throw new Error("Server rejected result for " + job.name + ": " + postResp.status);
+        }
+        await log("Exported: " + job.name + " (" + excalidrawElements.length + " elements)");
+
+        if (mode === "export_and_render") {
+          // Fetch the server's post-deconflict .excalidraw before rendering visual proof!
+          const finalDoc = await (await fetch("/final_excalidraw?idx=" + job.idx)).json();
+          await renderTilesForDoc(exportToBlob, finalDoc, job.idx, job.name, job.focus || "");
+        }
+      }
+    } else if (mode === "render") {
+      const jobs = await (await fetch("/jobs")).json();
+      await log("Rendering visual verification PNG tiles for " + jobs.length + " Excalidraw file(s)...");
+      for (const job of jobs) {
+        const doc = await (await fetch("/final_excalidraw?idx=" + job.idx)).json();
+        await renderTilesForDoc(exportToBlob, doc, job.idx, job.name, job.focus || "");
+      }
+    }
+
+    await fetch("/done", { method: "POST", body: "OK" });
+    statusEl.textContent = "DONE";
+  } catch (err) {
+    const msg = (err && err.stack) ? err.stack : String(err);
+    statusEl.textContent = "ERROR: " + msg;
+    try {
+      await fetch("/error", { method: "POST", body: msg });
+    } catch (_) {}
+  }
+}
+
+main();
+</script>
+</body>
+</html>

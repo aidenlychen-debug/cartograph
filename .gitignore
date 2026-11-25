@@ -1,0 +1,15 @@
+# Runtime offline CDN cache (auto-populated on first run)
+resources/cdn_cache/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# OS & temporary files
+.DS_Store
+Thumbs.db
+*.tmp
+.cartograph_candidates/
+visual_proofs/
